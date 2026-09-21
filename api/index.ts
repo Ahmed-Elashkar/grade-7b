@@ -13,7 +13,7 @@ async function seed(){
   if(adminError) throw new Error('Could not check teacher account: '+adminError.message);
   if(!admin){
     const {error}=await supabase.from('users').insert({name:'Admin',email:'admin@school.local',password:'admin123',role:'admin'});
-    if(error) throw new Error('Could not create teacher account: '+adminError.message);
+    if(error) throw new Error('Could not create teacher account: '+error.message);
   }
 
   const {data:student,error:studentError}=await supabase.from('users').select('id').eq('email','student@school.local').maybeSingle();
