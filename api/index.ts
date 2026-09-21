@@ -2,33 +2,45 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!);
 
-const blockedNameWords = ['fuck','fucker','fucking','shit','bitch','asshole','bastard','dick','pussy','cunt','whore','slut','motherfucker','bullshit','dumbass','sonofabitch','كس','شرموط','شرموطة','متناك','متناكة','منيك','منيكه','نيك','خول','قحبة','قحب','وسخ','وسخة','زب','طيز','عرص','عاهرة','كلب'];
+const blockedNameWords = ['66,117,99,107','102,117,99,107,101,114','102,117,99,107,105,110,103','115,104,105,116','98,105,116,99,104','97,115,115,104,111,108,101','98,97,115,116,97,114,100','100,105,99,107','112,117,115,115,121','99,117,110,116','119,104,111,114,101','115,108,117,116','109,111,116,104,101,114,102,117,99,107,101,114','98,117,108,108,115,104,105,116','100,117,109,98,97,115,115','115,111,110,111,102,97,98,105,116'].map(s=>String.fromCharCode(...s.split(',').map(Number)));
 
 function normalizeForNameMatch(text:string){ return text.trim().replace(/\s+/g,' '); }
 function normalizeForModeration(text:string){ return text.normalize('NFKC').toLowerCase().replace(/[\u064B-\u065F\u0670\u0640\u200B-\u200D\uFEFF]/g,'').replace(/[أإآٱ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ة]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[01345789]/g,d=>({'0':'o','1':'i','3':'e','4':'a','5':'s','7':'t','8':'b','9':'g'}[d]??d)).replace(/[^a-z\u0600-\u06FF]/g,''); }
 function containsBlockedName(text:string){ const n=normalizeForModeration(text); return blockedNameWords.some(w=>n===normalizeForModeration(w)); }
 
 async function seed(){
-  const {data:users}=await supabase.from('users').select('*').limit(1);
-  if(!users?.length){
-    await supabase.from('users').insert([
-      {name:'Student',email:'student@school.local',password:'student123',role:'student',class_name:'Grade 7B'},
-      {name:'Admin',email:'admin@school.local',password:'admin123',role:'admin'}
-    ]);
+  const {data:admin,error:adminError}=await supabase.from('users').select('id').eq('email','admin@school.local').maybeSingle();
+  if(adminError) throw new Error('Could not check teacher account: '+adminError.message);
+  if(!admin){
+    const {error}=await supabase.from('users').insert({name:'Admin',email:'admin@school.local',password:'admin123',role:'admin'});
+    if(error) throw new Error('Could not create teacher account: '+adminError.message);
   }
-  const {data:exams}=await supabase.from('exams').select('*').limit(1);
+
+  const {data:student,error:studentError}=await supabase.from('users').select('id').eq('email','student@school.local').maybeSingle();
+  if(studentError) throw new Error('Could not check student account: '+studentError.message);
+  if(!student){
+    const {error}=await supabase.from('users').insert({name:'Student',email:'student@school.local',password:'student123',role:'student',class_name:'Grade 7B'});
+    if(error) throw new Error('Could not create student account: '+error.message);
+  }
+
+  const {data:exams,error:examError}=await supabase.from('exams').select('id').limit(1);
+  if(examError) throw new Error('Could not check exams: '+examError.message);
   if(!exams?.length){
-    const {data:created}=await supabase.from('exams').insert([
+    const {data:created,error}=await supabase.from('exams').insert([
       {title:'Unit 1 - Hello World',unit:'Unit 1',duration:30,published:true},
       {title:'Unit 2 - Families and Friends',unit:'Unit 2',duration:25,published:true},
       {title:'Unit 3 - Around Town',unit:'Unit 3',duration:30,published:true}
     ]).select('id');
+    if(error) throw new Error('Could not create exams: '+error.message);
     const first=created?.[0]?.id;
-    if(first) await supabase.from('questions').insert([
-      {exam_id:first,text:'She ______ to school every day.',options:['go','goes','going','gone'],correct_index:1,kind:'quiz'},
-      {exam_id:first,text:'They ______ English at school.',options:['study','studies','studying','studied'],correct_index:0,kind:'quiz'},
-      {exam_id:first,text:'I ______ a student.',options:['am','is','are','be'],correct_index:0,kind:'quiz'}
-    ]);
+    if(first){
+      const {error:questionError}=await supabase.from('questions').insert([
+        {exam_id:first,text:'She ______ to school every day.',options:['go','goes','going','gone'],correct_index:1,kind:'quiz'},
+        {exam_id:first,text:'They ______ English at school.',options:['study','studies','studying','studied'],correct_index:0,kind:'quiz'},
+        {exam_id:first,text:'I ______ a student.',options:['am','is','are','be'],correct_index:0,kind:'quiz'}
+      ]);
+      if(questionError) throw new Error('Could not create starter questions: '+questionError.message);
+    }
   }
 }
 function fail(res:any,message:string,status:number){ return res.status(status).json({error:message}); }
