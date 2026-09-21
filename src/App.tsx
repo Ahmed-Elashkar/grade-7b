@@ -158,8 +158,8 @@ function Login({ role, setRole, studentName, teacherCode, setStudentName, setTea
           <p className="muted">{role === 'student' ? 'Sign in to see your quizzes and start learning.' : 'Manage Grade 7B exams, questions, students, and results.'}</p>
 
           <div className="role-switch">
-            <button className={role === 'student' ? 'active' : ''} onClick={() => setRole('student')}>Student</button>
-            <button className={role === 'admin' ? 'active' : ''} onClick={() => setRole('admin')}>Teacher</button>
+            <button type="button" className={role === 'student' ? 'active' : ''} onClick={() => setRole('student')}>Student</button>
+            <button type="button" className={role === 'admin' ? 'active' : ''} onClick={() => setRole('admin')}>Teacher</button>
           </div>
 
           {role === 'student' ? (
