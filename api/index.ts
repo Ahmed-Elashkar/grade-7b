@@ -37,7 +37,8 @@ async function handler(req:any,res:any){
   try{
     await seed();
     const url=new URL(req.url,'http://localhost');
-    const path=url.pathname;
+    const requestedPath=url.searchParams.get('path');
+    const path=requestedPath ? '/api/'+requestedPath.replace(/^\/+/, '') : url.pathname;
     const method=req.method||'GET';
     if(method==='GET'&&path==='/api/_healthcheck') return res.status(200).json({message:'Success'});
     if(method==='POST'&&path==='/api/login'){
