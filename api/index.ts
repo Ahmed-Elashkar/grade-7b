@@ -9,14 +9,14 @@ function normalizeForModeration(text:string){ return text.normalize('NFKC').toLo
 function containsBlockedName(text:string){ const n=normalizeForModeration(text); return blockedNameWords.some(w=>n===normalizeForModeration(w)); }
 
 async function seed(){
-  const {data:admin,error:adminError}=await supabase.from('users').select('id').eq('email','admin@school.local').maybeSingle();
+  const {data:admin,error:adminError}=await supabase.from('users').select('id').eq('email','admin@school.local').limit(1).maybeSingle();
   if(adminError) throw new Error('Could not check teacher account: '+adminError.message);
   if(!admin){
     const {error}=await supabase.from('users').insert({name:'Admin',email:'admin@school.local',password:'admin123',role:'admin'});
     if(error) throw new Error('Could not create teacher account: '+error.message);
   }
 
-  const {data:student,error:studentError}=await supabase.from('users').select('id').eq('email','student@school.local').maybeSingle();
+  const {data:student,error:studentError}=await supabase.from('users').select('id').eq('email','student@school.local').limit(1).maybeSingle();
   if(studentError) throw new Error('Could not check student account: '+studentError.message);
   if(!student){
     const {error}=await supabase.from('users').insert({name:'Student',email:'student@school.local',password:'student123',role:'student',class_name:'Grade 7B'});
@@ -47,7 +47,7 @@ function fail(res:any,message:string,status:number){ return res.status(status).j
 function userOut(u:any){ return {id:u.id,name:u.name,email:u.email,role:u.role,className:u.class_name}; }
 async function handler(req:any,res:any){
   try{
-    await seed();
+    try { await seed(); } catch (seedError:any) { console.error('Seed warning:', seedError?.message || seedError); }
     const url=new URL(req.url,'http://localhost');
     const requestedPath=url.searchParams.get('path');
     const path=requestedPath ? '/api/'+requestedPath.replace(/^\/+/, '') : url.pathname;
@@ -71,8 +71,6 @@ async function handler(req:any,res:any){
       }else{
         const demoTeacherCode=String.fromCharCode(97,100,109,105,110,49,50,51);
         user=items?.find((x:any)=>x.role==='admin'&&x.password===input.code);
-        // Keep the built-in demo teacher access working even if an old database
-        // record has stale credentials. The database user is still returned.
         if(!user && input.code===demoTeacherCode){
           user=items?.find((x:any)=>x.role==='admin') || {
             id:'demo-teacher',
