@@ -50,7 +50,7 @@ function App() {
         setErrorMessage('Please enter your name.');
         return;
       }
-      const data = await request<{ user: User }>(request('/api/login', { method: 'POST', body: JSON.stringify(role === 'student' ? { role, name: studentName } : { role, code: teacherCode }) }));
+      const data = await request<{ user: User }>('/api/login', { method: 'POST', body: JSON.stringify(role === 'student' ? { role, name: studentName } : { role, code: teacherCode }) });
       setUser(data.user);
       navigate(data.user.role === 'admin' ? 'admin' : 'student');
     } catch (error) {
@@ -183,7 +183,7 @@ function StudentDashboard({ user, onLogout, onStart, onStudy }: { user: User; on
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    request<{ exams: Exam[] }>(request('/api/exams'))
+    request<{ exams: Exam[] }>('/api/exams')
       .then(data => setExams(data.exams.filter(exam => exam.published)))
       .finally(() => setLoading(false));
   }, []);
@@ -240,7 +240,7 @@ function ExamPage({ user, exam, onBack, onResult }: { user: User; exam: Exam; on
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    request<{ questions: Question[] }>(request(`/api/exams/${exam.id}/questions`)).then(data => {
+    request<{ questions: Question[] }>(`/api/exams/${exam.id}/questions`).then(data => {
       const quizQuestions = data.questions.filter(question => (question.kind ?? 'quiz') === 'quiz');
       setQuestions(quizQuestions);
       setAnswers(Array(quizQuestions.length).fill(-1));
@@ -250,7 +250,7 @@ function ExamPage({ user, exam, onBack, onResult }: { user: User; exam: Exam; on
   const submit = async () => {
     setBusy(true);
     try {
-      const data = await request<{ score: number; total: number; percentage: number }>(request('/api/attempts', { method: 'POST', body: JSON.stringify({ userId: user.id, examId: exam.id, answers }) }));
+      const data = await request<{ score: number; total: number; percentage: number }>('/api/attempts', { method: 'POST', body: JSON.stringify({ userId: user.id, examId: exam.id, answers }) });
       onResult(data);
     } finally {
       setBusy(false);
@@ -293,7 +293,7 @@ function FlashcardPage({ exam, onBack }: { exam: Exam; onBack: () => void }) {
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
-    request<{ questions: Question[] }>(request(`/api/exams/${exam.id}/questions`)).then(data => {
+    request<{ questions: Question[] }>(`/api/exams/${exam.id}/questions`).then(data => {
       setCards(data.questions.filter(question => (question.kind ?? 'quiz') === 'flashcard'));
     });
   }, [exam.id]);
@@ -356,9 +356,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const refresh = async () => {
     const [studentsData, examsData, attemptsData] = await Promise.all([
-      request<{ students: Student[] }>(request('/api/students')),
-      request<{ exams: Exam[] }>(request('/api/exams')),
-      request<{ attempts: Attempt[] }>(request('/api/attempts'))
+      request<{ students: Student[] }>('/api/students'),
+      request<{ exams: Exam[] }>('/api/exams'),
+      request<{ attempts: Attempt[] }>('/api/attempts')
     ]);
     setStudents(studentsData.students);
     setExams(examsData.exams);
@@ -369,26 +369,26 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const loadQuestions = async (examId: string) => {
     setSelectedExam(examId);
-    if (examId) setQuestions((await request<{ questions: Question[] }>(request(`/api/exams/${examId}/questions`))).questions);
+    if (examId) setQuestions((await request<{ questions: Question[] }>(`/api/exams/${examId}/questions`)).questions);
     else setQuestions([]);
   };
 
-  const deleteStudent = async (id: string) => { await request(request(`/api/students/${id}`)); setNotice('Student deleted'); refresh(); };
-  const deleteExam = async (id: string) => { await request(request(`/api/exams/${id}`)); setNotice('Quiz deleted'); refresh(); };
-  const deleteQuestion = async (id: string) => { await request(request(`/api/questions/${id}`)); if (selectedExam) loadQuestions(selectedExam); };
+  const deleteStudent = async (id: string) => { await request(`/api/students/${id}`, { method: 'DELETE' }); setNotice('Student deleted'); refresh(); };
+  const deleteExam = async (id: string) => { await request(`/api/exams/${id}`, { method: 'DELETE' }); setNotice('Quiz deleted'); refresh(); };
+  const deleteQuestion = async (id: string) => { await request(`/api/questions/${id}`, { method: 'DELETE' }); if (selectedExam) loadQuestions(selectedExam); };
   const clearResults = async () => {
-    await request(request('/api/attempts'));
+    await request('/api/attempts', { method: 'DELETE' });
     setConfirmClearResults(false);
     setNotice('All quiz results were cleared');
     refresh();
   };
   const openPreview = async (exam: Exam) => {
-    const data = await request<{ questions: Question[] }>(request(`/api/exams/${exam.id}/questions`));
+    const data = await request<{ questions: Question[] }>(`/api/exams/${exam.id}/questions`);
     setPreviewExam(exam);
     setPreviewQuestions(data.questions);
   };
   const setPublished = async (exam: Exam, published: boolean) => {
-    await request(request(`/api/exams/${exam.id}`, { published }));
+    await request(`/api/exams/${exam.id}`, { method: 'PUT', body: JSON.stringify({ published }) });
     setNotice(published ? 'Quiz published to students' : 'Quiz moved back to draft');
     refresh();
   };
@@ -468,7 +468,7 @@ function StudentModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
   const [error, setError] = useState('');
   const save = async () => {
     if (!name.trim()) { setError('Please enter the student name.'); return; }
-    try { await request(request('/api/students', { method: 'POST', body: JSON.stringify({ name, className }) })); onSaved(); } catch { setError('Could not add this student.'); }
+    try { await request('/api/students', { method: 'POST', body: JSON.stringify({ name, className }) }); onSaved(); } catch { setError('Could not add this student.'); }
   };
   return <Modal title="Add Grade 7B Student" onClose={onClose}><div className="modal-form"><label>Name<input value={name} onChange={e => setName(e.target.value)} placeholder="Student name" /></label><label>Class<input value={className} onChange={e => setClassName(e.target.value)} /></label>{error && <div className="error-box">{error}</div>}<button className="primary-btn full-btn" onClick={save}>Save student <ArrowRight size={17} /></button></div></Modal>;
 }
@@ -477,7 +477,7 @@ function ExamModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
   const [title, setTitle] = useState('');
   const [unit, setUnit] = useState('Unit 1');
   const [duration, setDuration] = useState('30');
-  const save = async () => { if (!title.trim()) return; await request(request('/api/exams', { method: 'POST', body: JSON.stringify({ title, unit, duration: Number(duration) }), published: false })); onSaved(); };
+  const save = async () => { if (!title.trim()) return; await request('/api/exams', { method: 'POST', body: JSON.stringify({ title, unit, duration: Number(duration), published: false }) }); onSaved(); };
   return <Modal title="Create Grade 7B Quiz" onClose={onClose}><div className="modal-form"><label>Quiz title<input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Unit 1 Revision" /></label><label>Unit<input value={unit} onChange={e => setUnit(e.target.value)} /></label><label>Duration in minutes<input type="number" value={duration} onChange={e => setDuration(e.target.value)} /></label><div className="draft-note">New quizzes start as drafts. Add your questions, preview the quiz, then publish it to students.</div><button className="primary-btn full-btn" onClick={save}>Create draft quiz <ArrowRight size={17} /></button></div></Modal>;
 }
 
@@ -491,7 +491,7 @@ function QuestionModal({ examId, onClose, onSaved }: { examId: string; onClose: 
     if (!text.trim()) return;
     if (kind === 'flashcard' && !answer.trim()) return;
     if (kind === 'quiz' && options.some(option => !option.trim())) return;
-    await request(request(`/api/exams/${examId}/questions`, { kind, text, answer: kind === 'flashcard' ? answer : undefined, options: kind === 'quiz' ? options : [], correctIndex }));
+    await request(`/api/exams/${examId}/questions`, { method: 'POST', body: JSON.stringify({ kind, text, answer: kind === 'flashcard' ? answer : undefined, options: kind === 'quiz' ? options : [], correctIndex }) });
     onSaved();
   };
   return <Modal title={kind === 'quiz' ? 'Add Quiz Question' : 'Add Flashcard'} onClose={onClose}><div className="modal-form"><label>Type<select value={kind} onChange={e => setKind(e.target.value as 'quiz' | 'flashcard')}><option value="quiz">Quiz question</option><option value="flashcard">Flashcard</option></select></label><label>{kind === 'quiz' ? 'Question' : 'Front / Prompt'}<textarea value={text} onChange={e => setText(e.target.value)} placeholder={kind === 'quiz' ? 'Write the question...' : 'Write the flashcard prompt...'} /></label>{kind === 'flashcard' ? <label>Back / Answer<textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="Write the answer or explanation..." /></label> : <>{options.map((option, index) => <input key={index} value={option} onChange={e => setOptions(previous => previous.map((value, i) => i === index ? e.target.value : value))} placeholder={`Option ${index + 1}`} />)}<label>Correct answer<select value={correctIndex} onChange={e => setCorrectIndex(Number(e.target.value))}><option value={0}>Option 1</option><option value={1}>Option 2</option><option value={2}>Option 3</option><option value={3}>Option 4</option></select></label></>}<button className="primary-btn full-btn" onClick={save}>Save {kind === 'quiz' ? 'question' : 'flashcard'} <ArrowRight size={17} /></button></div></Modal>;
