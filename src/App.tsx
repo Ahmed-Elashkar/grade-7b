@@ -113,7 +113,7 @@ function App() {
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? 'brand brand-compact' : 'brand'}>
-      <div className="brand-mark"><img src="/resources/barakat-logo.png" alt="Barakat Language Schools" /></div>
+      <div className="brand-mark"><img src="/resources/barakat-logo.svg" alt="Barakat Language Schools" /></div>
       <div className="brand-copy">
         <div className="brand-name">Barakat Language Schools</div>
       </div>
